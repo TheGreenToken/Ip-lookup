@@ -29,13 +29,17 @@ function renderMap(lat, lon){
   if(lat == null || lon == null){ noCoords.style.display=''; return; }
   noCoords.style.display='none';
 
-  const zoom=5;
-  const iframe=document.createElement('iframe');
-  iframe.style.cssText='width:100%;height:100%;border:none;display:block;filter:invert(1) hue-rotate(180deg) brightness(0.85) saturate(0.7);';
-  iframe.setAttribute('loading','lazy');
-  iframe.setAttribute('referrerpolicy','no-referrer');
-  iframe.src=`https://www.openstreetmap.org/export/embed.html?bbox=${lon-8},${lat-5},${lon+8},${lat+5}&layer=mapnik&marker=${lat},${lon}`;
-  wrap.appendChild(iframe);
+  const img=document.createElement('img');
+  img.style.cssText='width:100%;height:100%;object-fit:cover;display:block;filter:invert(1) hue-rotate(180deg) brightness(0.8) saturate(0.6);';
+  img.alt='';
+  // use staticmap.net — no API key, no iframe restrictions
+  const w=Math.round(wrap.offsetWidth||700), h=Math.round(wrap.offsetHeight||300);
+  img.src=`https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lon}&zoom=6&size=${w}x${h}&markers=${lat},${lon},red`;
+  img.onerror=()=>{
+    // fallback: show coords text
+    wrap.innerHTML=`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:'Share Tech Mono',monospace;font-size:0.7rem;color:#333;letter-spacing:0.15em">${lat.toFixed(4)}, ${lon.toFixed(4)}</div>`;
+  };
+  wrap.appendChild(img);
 }
 
 function renderResults(d){
