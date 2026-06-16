@@ -26,20 +26,63 @@ function renderMap(lat, lon){
   const wrap=document.getElementById('mapWrap');
   const noCoords=document.getElementById('mapNoCoords');
   wrap.innerHTML=''; wrap.appendChild(noCoords);
-  if(lat == null || lon == null){ noCoords.style.display=''; return; }
+  if(lat==null||lon==null){noCoords.style.display='';return;}
   noCoords.style.display='none';
 
-  const img=document.createElement('img');
-  img.style.cssText='width:100%;height:100%;object-fit:cover;display:block;filter:invert(1) hue-rotate(180deg) brightness(0.8) saturate(0.6);';
-  img.alt='';
-  // use staticmap.net — no API key, no iframe restrictions
-  const w=Math.round(wrap.offsetWidth||700), h=Math.round(wrap.offsetHeight||300);
-  img.src=`https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lon}&zoom=6&size=${w}x${h}&markers=${lat},${lon},red`;
-  img.onerror=()=>{
-    // fallback: show coords text
-    wrap.innerHTML=`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:'Share Tech Mono',monospace;font-size:0.7rem;color:#333;letter-spacing:0.15em">${lat.toFixed(4)}, ${lon.toFixed(4)}</div>`;
-  };
-  wrap.appendChild(img);
+  const canvas=document.createElement('canvas');
+  canvas.style.cssText='width:100%;height:100%;display:block;';
+  wrap.appendChild(canvas);
+
+  const Z=6;
+  function lon2x(lon,z){return Math.floor((lon+180)/360*Math.pow(2,z));}
+  function lat2y(lat,z){return Math.floor((1-Math.log(Math.tan(lat*Math.PI/180)+1/Math.cos(lat*Math.PI/180))/Math.PI)/2*Math.pow(2,z));}
+  function lon2px(lon,z){return((lon+180)/360*Math.pow(2,z))%1*256;}
+  function lat2py(lat,z){return((1-Math.log(Math.tan(lat*Math.PI/180)+1/Math.cos(lat*Math.PI/180))/Math.PI)/2*Math.pow(2,z))%1*256;}
+
+  function draw(){
+    const W=wrap.offsetWidth||360, H=wrap.offsetHeight||300;
+    canvas.width=W; canvas.height=H;
+    const ctx=canvas.getContext('2d');
+    ctx.fillStyle='#0a0a0a'; ctx.fillRect(0,0,W,H);
+
+    const cx=lon2x(lon,Z), cy=lat2y(lat,Z);
+    const ox=lon2px(lon,Z), oy=lat2py(lat,Z);
+    const startX=Math.floor((W/2-ox)/256), startY=Math.floor((H/2-oy)/256);
+    const tilesX=Math.ceil(W/256)+2, tilesY=Math.ceil(H/256)+2;
+
+    for(let tx=startX-1;tx<=startX+tilesX;tx++){
+      for(let ty=startY-1;ty<=startY+tilesY;ty++){
+        const px=Math.round(W/2-ox+(tx)*256);
+        const py=Math.round(H/2-oy+(ty)*256);
+        const img=new Image();
+        img.onload=()=>{
+          // dark mode: invert colors
+          ctx.save();
+          ctx.filter='invert(1) hue-rotate(180deg) brightness(0.75) saturate(0.5)';
+          ctx.drawImage(img,px,py,256,256);
+          ctx.restore();
+          drawMarker();
+        };
+        img.src=`/api/map?z=${Z}&x=${cx+tx}&y=${cy+ty}`;
+      }
+    }
+    drawMarker();
+
+    function drawMarker(){
+      const mx=W/2, my=H/2;
+      ctx.save();
+      // pulse ring
+      ctx.beginPath(); ctx.arc(mx,my,14,0,2*Math.PI);
+      ctx.strokeStyle='rgba(232,0,15,0.4)'; ctx.lineWidth=1.5; ctx.stroke();
+      // dot
+      ctx.beginPath(); ctx.arc(mx,my,5,0,2*Math.PI);
+      ctx.fillStyle='#e8000f';
+      ctx.shadowColor='#e8000f'; ctx.shadowBlur=12;
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+  draw();
 }
 
 function renderResults(d){
