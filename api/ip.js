@@ -80,7 +80,8 @@ module.exports = async function handler(req, res) {
   const region      = s(d1?.regionName   || d2?.region         || "", 80);
   const city        = s(d1?.cityName     || d2?.city           || "", 80);
   const postal      = s(d1?.zipCode      || d2?.postal         || "", 20);
-  const tz          = s(d1?.timeZone     || d2?.timezone       || "", 60);
+  const rawTz = d1?.timeZone || d2?.timezone || d2?.time_zone?.name || d2?.time_zone || "";
+  const tz = s(typeof rawTz === "object" ? (rawTz?.name || rawTz?.id || "") : rawTz, 60);
   const lat         = d1?.latitude  || d2?.latitude  || null;
   const lon         = d1?.longitude || d2?.longitude || null;
   const isp         = s(d2?.connection?.isp || d2?.isp || "", 100);
